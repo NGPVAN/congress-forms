@@ -4,15 +4,16 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.define :integration do |integration_config|
-    integration_config.vm.box = "dummy"
-    integration_config.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
+  config.vm.define :ec2 do |ec2_config|
+    ec2_config.vm.box = "dummy"
+    ec2_config.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
 
-    integration_config.vm.provider :aws do |aws, override|
-      aws.keypair_name = "vagrant"
+    ec2_config.vm.provider :aws do |aws, override|
+      aws.keypair_name = "congress-forms"
       aws.ami = "ami-b08b6cd8"
+      aws.security_groups = "congress-forms"
       override.ssh.username = "ubuntu"
-      override.ssh.private_key_path = "~/.ssh/vagrant.pem"
+      override.ssh.private_key_path = "~/.ssh/congress-forms.pem"
     end
   end
 
