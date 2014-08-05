@@ -33,33 +33,37 @@ class CongressMember < ActiveRecord::Base
     }.merge o)
   end
 
+  def fill_out_form_no_rescue f, ct, status_fields, &block
+    begin
+      if REQUIRES_WEBKIT.include? self.bioguide_id
+        success_hash = fill_out_form_with_webkit f, &block
+      elsif REQUIRES_WATIR.include? self.bioguide_id
+        success_hash = fill_out_form_with_watir f, &block
+      else
+        success_hash = fill_out_form_with_poltergeist f, &block
+      end
+    rescue Exception => e
+      status_fields[:status] = "error"
+      message = YAML.load(e.message)
+      status_fields[:extra][:screenshot] = message[:screenshot] if message.is_a?(Hash) and message.include? :screenshot
+      raise e, message[:message] if message.is_a?(Hash)
+      raise e, message
+    end
+
+    unless success_hash[:success]
+      status_fields[:status] = "failure"
+      status_fields[:extra][:screenshot] = success_hash[:screenshot] if success_hash.include? :screenshot
+      raise FillFailure, "Filling out the remote form was not successful"
+    end
+  end
+
   def fill_out_form f={}, ct = nil, &block
     status_fields = {congress_member: self, status: "success", extra: {}}.merge(ct.nil? ? {} : {campaign_tag: ct})
     begin
-      begin
-        if REQUIRES_WEBKIT.include? self.bioguide_id
-          success_hash = fill_out_form_with_webkit f, &block
-        elsif REQUIRES_WATIR.include? self.bioguide_id
-          success_hash = fill_out_form_with_watir f, &block
-        else
-          success_hash = fill_out_form_with_poltergeist f, &block
-        end
-      rescue Exception => e
-        status_fields[:status] = "error"
-        message = YAML.load(e.message)
-        status_fields[:extra][:screenshot] = message[:screenshot] if message.is_a?(Hash) and message.include? :screenshot
-        raise e, message[:message] if message.is_a?(Hash)
-        raise e, message
-      end
-
-      unless success_hash[:success]
-        status_fields[:status] = "failure"
-        status_fields[:extra][:screenshot] = success_hash[:screenshot] if success_hash.include? :screenshot
-        raise FillFailure, "Filling out the remote form was not successful"
-      end
+      fill_out_form_no_rescue f, ct, status_fields, &block
     rescue Exception => e
       # we need to add the job manually, since DJ doesn't handle yield blocks
-      self.delay.fill_out_form f, ct
+      self.delay.fill_out_form_no_rescue f, ct, status_fields
       last_job = Delayed::Job.last
       last_job.attempts = 1
       last_job.run_at = Time.now
