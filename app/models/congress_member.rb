@@ -171,6 +171,11 @@ class CongressMember < ActiveRecord::Base
   end
 
   def fill_out_form_with_capybara f={}, driver
+
+    Capybara.register_driver :poltergeist do |app|
+      Capybara::Poltergeist::Driver.new(app, {:phantomjs_options => ['--ignore-ssl-errors=yes', '--proxy=192.168.12.229:8889', '--proxy-type=socks5']})
+    end
+
     session = Capybara::Session.new(driver)
     session.driver.options[:js_errors] = false if driver == :poltergeist
     begin
