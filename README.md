@@ -14,6 +14,8 @@ This project relies on [Contact Congress](https://github.com/NGPVAN/contact-cong
 
 #### Installation
 
+ - `git clone --recursive git@github.com:NGPVAN/congress-forms`
+ - `cd congress-forms`
  - `vagrant up local`
  - `vim config/congress-forms_config.rb # edit settings here`
 
